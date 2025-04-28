@@ -1,0 +1,16 @@
+[package]
+name = "ars-client"
+version = "0.1.0"
+edition = "2021"
+description = "Agent Registration Server (ARS) client library"
+repository = "https://github.com/yourusername/ars"
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+thiserror = "1.0"
+base64 = "0.21"
