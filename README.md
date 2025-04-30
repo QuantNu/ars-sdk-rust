@@ -1,143 +1,194 @@
-# Agent Registration Server Rust Client
+# ARS Rust SDK
 
-A Rust client library for interacting with the Agent Registration Server (ARS).
+Rust SDK for the Agent Registration Server (ARS).
+
+## Overview
+
+The ARS Rust SDK provides a client library for interacting with the Agent Registration Server, enabling Rust applications to register agents, discover capabilities, manage sessions, and execute operations across different agent protocols.
 
 ## Installation
 
-Add the library to your Cargo.toml:
+### For Users
+
+Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ars-client = { git = "https://github.com/yourusername/ars", path = "sdk/rust" }
+ars-client = "0.1.0"
+```
+
+### For Developers
+
+Clone the repository and build:
+
+```bash
+git clone https://github.com/quantnu/ars.git
+cd ars/sdk/rust
+cargo build
+```
+
+## Building Independently
+
+The Rust SDK can be built independently using the included Makefile:
+
+```bash
+# Clean, build, and test
+make
+
+# Individual steps
+make build     # Build the project in debug mode
+make release   # Build the project in release mode
+make test      # Run tests
+make clean     # Clean build artifacts
+make doc       # Generate documentation
+make clippy    # Run clippy for linting
+make fmt       # Format code
+```
+
+If you don't have `make` available, you can use Cargo commands directly:
+
+```bash
+# Build the project
+cargo build
+
+# Build in release mode
+cargo build --release
+
+# Run tests
+cargo test
+
+# Format code
+cargo fmt
+
+# Run linter
+cargo clippy
+
+# Generate documentation
+cargo doc --no-deps
 ```
 
 ## Usage
 
 ```rust
-use ars_client::{ARSClient, AgentDetailsBuilder, ARSError};
-use std::collections::HashMap;
+use ars_client::{ARSClient, AgentRegistration, Protocol, TrustLevel, Error};
 
 #[tokio::main]
-async fn main() -> Result<(), ARSError> {
-    // Create a new client
-    let mut client = ARSClient::new("https://ars.example.com");
-    
-    // Generate a key pair (simplified for example)
-    let public_key = base64::encode("YOUR_PUBLIC_KEY_HERE");
-    
-    // Build agent details
-    let agent = AgentDetailsBuilder::new()
-        .name("My Agent")
-        .version("1.0.0")
-        .endpoint("https://myagent.example.com/api")
-        .add_capability("query")
-        .add_capability("response")
-        .public_key(public_key)
-        .add_metadata("description", "My awesome agent")
-        .build()?;
-    
-    // Register the agent
-    let response = client.register_agent(agent).await?;
-    println!("Registered agent with ID: {}", response.agent.id.unwrap_or_default());
-    
-    // Save credentials for future sessions
-    let agent_id = response.agent.id.unwrap();
-    let token = response.token;
-    
-    // Or create a client with existing credentials
-    let client = ARSClient::with_credentials(
-        "https://ars.example.com",
-        agent_id,
-        token,
-    );
-    
-    // Discover other agents
-    let discovery = client
-        .discover_agents(
-            Some(vec!["query".to_string()]),
-            None,
-            Some(5),
-            None,
-        )
-        .await?;
-    
-    println!("Found {} agents with 'query' capability", discovery.total);
-    
-    // Deregister when done
-    client.deregister_agent().await?;
-    
+async fn main() -> Result<(), Error> {
+    // Create client
+    let client = ARSClient::new("https://ars.example.com");
+
+    // Register an agent
+    let (agent, token) = client.register_agent(AgentRegistration {
+        name: "Example Agent".to_string(),
+        description: "An example agent demonstrating basic functionality".to_string(),
+        capabilities: vec!["translate".to_string(), "summarize".to_string()],
+        endpoint: "https://example.com/agent".to_string(),
+        protocol: Protocol::MCP,
+        protocol_version: "1.0".to_string(),
+        public_key: "example-public-key".to_string(),
+        metadata: None,
+    }).await?;
+
+    println!("Registered agent with ID: {}", agent.id);
+    println!("Agent token: {}", token);
+
+    // Discover agents with specific capabilities
+    let agents = client.discover_agents(
+        vec!["translate".to_string()],
+        vec![TrustLevel::Verified, TrustLevel::Partner],
+    ).await?;
+
+    println!("Found {} agents", agents.len());
+
+    // Execute a task
+    let params = serde_json::json!({
+        "text": "Hello world",
+        "sourceLanguage": "en",
+        "targetLanguage": "fr",
+    });
+
+    let result = client.execute_task("translate", params).await?;
+    println!("Translation result: {}", result);
+
     Ok(())
 }
 ```
 
-## API Reference
-
-### ARSClient
+## Session Management
 
 ```rust
-let client = ARSClient::new(server_url);
-// or
-let client = ARSClient::with_credentials(server_url, agent_id, auth_token);
-```
+use ars_client::{ARSSessionClient, SessionData, Error};
+use std::collections::HashMap;
 
-Create a new client with the server URL, optionally with existing credentials.
+#[tokio::main]
+async fn main() -> Result<(), Error> {
+    // Create session-aware client
+    let client = ARSSessionClient::new("https://ars.example.com");
 
-### Methods
+    // Create session data
+    let mut preferences = HashMap::new();
+    preferences.insert("language".to_string(), "en".into());
 
-All methods return `Result<T, ARSError>` and are async.
+    let mut context = HashMap::new();
+    context.insert("user".to_string(), "user-123".into());
+    context.insert("preferences".to_string(), preferences.into());
 
-- `register_agent(&mut self, agent: AgentDetails) -> Result<RegisterResponse, ARSError>`: Register a new agent
-- `discover_agents(&self, capabilities: Option<Vec<String>>, metadata_filter: Option<HashMap<String, String>>, limit: Option<usize>, offset: Option<usize>) -> Result<DiscoverResponse, ARSError>`: Find agents matching criteria
-- `get_agent(&self, agent_id: &str) -> Result<AgentDetails, ARSError>`: Get details for a specific agent
-- `update_agent(&self, details: AgentDetails) -> Result<AgentDetails, ARSError>`: Update your agent
-- `deregister_agent(&mut self) -> Result<(), ARSError>`: Remove your agent from the registry
-- `verify_agent(&self, agent_id: &str, challenge: &[u8], signature: &[u8]) -> Result<bool, ARSError>`: Verify another agent's identity
+    let session_data = SessionData {
+        context: context,
+        metadata: HashMap::new(),
+    };
 
-### AgentDetailsBuilder
+    // Create a session
+    let (session, session_token) = client.create_session(session_data).await?;
+    println!("Created session with ID: {}", session.id);
 
-A builder pattern for constructing agent details:
+    // Execute task using session context
+    let params = serde_json::json!({
+        "text": "Hello world",
+        "targetLanguage": "fr",
+    });
 
-```rust
-let agent = AgentDetailsBuilder::new()
-    .name("My Agent")
-    .version("1.0.0")
-    .endpoint("https://example.com/api")
-    .add_capability("query")
-    .public_key(public_key)
-    .add_metadata("key", "value")
-    .build()?;
-```
+    let result = client.execute_task_with_session("translate", params, &session.id).await?;
+    println!("Translation result: {}", result);
 
-## Error Handling
+    // Update session with new information
+    let mut history_entry = HashMap::new();
+    history_entry.insert("task".to_string(), "translate".into());
+    history_entry.insert("input".to_string(), serde_json::json!({"text": "Hello world", "targetLanguage": "fr"}).into());
+    history_entry.insert("output".to_string(), "Bonjour le monde".into());
 
-The library provides an `ARSError` enum that wraps various error conditions:
+    let mut history = Vec::new();
+    history.push(history_entry);
 
-```rust
-#[derive(Error, Debug)]
-pub enum ARSError {
-    #[error("HTTP error: {0}")]
-    HttpError(#[from] reqwest::Error),
-    
-    #[error("JSON error: {0}")]
-    JsonError(#[from] serde_json::Error),
-    
-    #[error("Authentication error: {0}")]
-    AuthError(String),
-    
-    #[error("API error: {status_code} - {message}")]
-    ApiError {
-        status_code: u16,
-        message: String,
-    },
+    let mut new_context = HashMap::new();
+    new_context.insert("history".to_string(), history.into());
+
+    let update_data = SessionData {
+        context: new_context,
+        metadata: HashMap::new(),
+    };
+
+    client.update_session(&session.id, update_data).await?;
+
+    Ok(())
 }
 ```
 
-Handle these errors appropriately in your code.
+## Features
 
-## Examples
+- **Agent Registration**: Register agents with the ARS
+- **Agent Discovery**: Find agents based on capabilities and trust levels
+- **Trust Verification**: Verify agent identity and trust levels
+- **Session Management**: Maintain stateful interactions between agents
+- **Cross-Protocol Operation**: Work with agents across different protocols
+- **Async/Await**: Full async support with Tokio runtime
+- **Error Handling**: Comprehensive error handling with custom error types
+- **Serialization**: Seamless serde integration for request/response handling
 
-See the [examples](./examples) directory for more usage examples.
+## Contributing
+
+Contributions are welcome! Please see the main repository's CONTRIBUTING.md for guidelines.
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the LICENSE file for details.

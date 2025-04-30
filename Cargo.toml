@@ -3,9 +3,10 @@ name = "ars-client"
 version = "0.1.0"
 edition = "2021"
 description = "Agent Registration Server (ARS) client library"
-repository = "https://github.com/yourusername/ars"
+repository = "https://github.com/quantnu/ars"
 license = "MIT"
 readme = "README.md"
+authors = ["quantnu"]
 
 [dependencies]
 reqwest = { version = "0.11", features = ["json"] }
@@ -14,3 +15,15 @@ serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }
 thiserror = "1.0"
 base64 = "0.21"
+uuid = { version = "1.3", features = ["v4", "serde"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockito = "1.0"
+once_cell = "1.8"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[features]
+default = []
+testing = []

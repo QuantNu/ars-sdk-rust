@@ -1,0 +1,122 @@
+# Rust specific
+/target/
+/debug/
+/release/
+/profraw/
+/.cargo-cache/
+/Cargo.lock
+/Cargo.toml.orig
+**/*.rs.bk
+**/*.rlib
+
+# rustfmt
+**/*.rs.rustfmt
+.rustfmt.toml.bk
+
+# rustdoc
+/doc/
+/target/doc/
+
+# Compiler generated files
+/target/*/deps/
+/target/*/examples/
+/target/*/incremental/
+/target/release/build/
+/target/debug/build/
+/target/*.profraw
+/target/wasm*/
+/target/*/native/
+.cargo-ok
+
+# Generated protobuf files
+/src/generated/
+/src/**/*_grpc.rs
+/src/**/*_proto.rs
+/src/**/*.rs.in
+/src/**/*.rs.grpc.in
+/out/
+
+# Build output
+/bin/
+/dist/
+/pkg/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+.envrc
+
+# IDE specific files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.default
+.rustc_info.json
+.rust/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+.coverage/
+coverage/
+coverage.txt
+coverage.html
+tarpaulin-report.html
+.tarpaulin-cache/
+
+# Benchmark output
+criterion/
+/benches/target/
+benchmark-results/
+
+# Documentation generation
+/target/doc/
+/doc/generated/
+/target/rls/
+
+# Temporary files
+*.tmp
+*.bak
+tmp/
+.tmp/
+.temp/
+
+# Project specific
+examples/**/target/
+examples/**/.env
+examples/**/Cargo.lock
+.secrets/
+secrets.json
+.apikey
+
+# Clippy
+clippy_lints/
+
+# WASM output
+/pkg/
+/wasm-pack.log
+/target/wasm32-*/
+
+# Compiled dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled static libraries
+*.a
+*.lib
+
+# Debug symbols
+*.pdb
+
+# Flamegraph output
+flamegraph.svg
+perf.data
+perf.data.old
